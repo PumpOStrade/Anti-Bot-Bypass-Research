@@ -1,0 +1,71 @@
+name: Akamai Bot Manager
+provider: akamai
+description: Akamai Bot Manager uses client-side JavaScript sensor data collection and server-side bot scoring
+
+cookies:
+  primary:
+    - name: _abck
+      description: Primary bot management cookie. Valid when contains ~0~
+      weight: 0.3
+    - name: bm_sz
+      description: Session sizing cookie with pipe-delimited timestamp/sizing data
+      weight: 0.3
+  secondary:
+    - name: ak_bmsc
+      description: Older bot management cookie
+      weight: 0.1
+    - name: bm_sv
+      description: Server-side validation cookie
+      weight: 0.1
+    - name: bm_mi
+      description: Mobile intelligence cookie
+      weight: 0.1
+
+scripts:
+  patterns:
+    - regex: '/[a-f0-9]{20,}/[a-f0-9]{6,}(?:/[a-f0-9]*)*(?:\.js)?'
+      description: Hex-path sensor script URL
+      weight: 0.2
+    - regex: '/_bm/.*\.js'
+      description: Bot manager script path
+      weight: 0.15
+  signatures:
+    - bmak
+    - sensor_data
+    - "ak.v="
+    - bm.pers
+    - mn_abck
+    - ab.storage
+
+headers:
+  - name: x-akamai-session-info
+    weight: 0.1
+  - name: x-akamai-transformed
+    weight: 0.1
+  - name: x-akamai-request-id
+    weight: 0.1
+  - name: server
+    values: [AkamaiGHost, AkamaiNetStorage]
+    weight: 0.1
+
+sensor_data:
+  format: pipe_delimited
+  post_content_type: application/x-www-form-urlencoded
+  post_body_key: sensor_data
+  fields:
+    - screen.width
+    - screen.height
+    - screen.colorDepth
+    - navigator.userAgent
+    - navigator.language
+    - navigator.platform
+    - navigator.plugins.length
+    - timezone_offset
+    - performance_timing_deltas
+    - mouse_move_count
+    - click_count
+    - key_press_count
+    - canvas_hash
+    - webgl_hash
+    - audio_hash
+    - automation_flags
