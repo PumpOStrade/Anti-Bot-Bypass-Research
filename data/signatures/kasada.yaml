@@ -1,0 +1,42 @@
+name: Kasada
+provider: kasada
+description: Kasada uses WebAssembly-based challenge generation with proof-of-work
+
+cookies:
+  format: JWT-like tokens starting with "eyJ"
+  note: Cookie names are customer-configured, not standardized
+
+scripts:
+  patterns:
+    - regex: '/ips\.js'
+      description: Primary Kasada script
+      weight: 0.25
+    - regex: '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.*\.js'
+      description: UUID-based script path
+      weight: 0.2
+    - regex: 'k\.tl/'
+      description: Kasada CDN
+      weight: 0.2
+  signatures:
+    - kpsdk
+    - KP_
+    - kasada
+
+headers:
+  - name: x-kpsdk-cd
+    description: Client data header
+    weight: 0.4
+  - name: x-kpsdk-ct
+    description: Client token header
+    weight: 0.4
+  - name: x-kpsdk-v
+    description: Kasada version header
+    weight: 0.3
+
+telemetry:
+  endpoint_pattern: '/tl/'
+  uses_wasm: true
+
+block_page:
+  http_status: 429
+  characteristics: Blank page with JavaScript bootstrap for WASM challenge

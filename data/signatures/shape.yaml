@@ -1,0 +1,39 @@
+name: Shape Security (F5 Distributed Cloud Bot Defense)
+provider: shape
+description: Shape uses heavily obfuscated JavaScript with anti-tamper protections
+
+cookies:
+  note: Cookie names are customer-configured
+  characteristics:
+    - Very long values (500+ chars)
+    - Encoded with pipe or tilde delimiters
+    - Pattern matches [A-Za-z0-9+/=|~_-]+
+
+scripts:
+  characteristics:
+    - Very large (200-500KB minified)
+    - Extreme obfuscation with massive string arrays and rotation functions
+    - Self-defending code (anti-tamper, anti-debug)
+  path_patterns:
+    - '/s/'
+    - '/shape/'
+    - Opaque hex paths
+  code_patterns:
+    - 'window.s_bfp'
+    - 'window.s_*' prefixed globals
+    - 'Function("return this")'
+    - Massive var declarations with 100+ string array elements
+
+headers:
+  - name: x-f5-*
+    weight: 0.3
+  - name: x-shape-*
+    weight: 0.3
+
+network:
+  sensor_post_size: 5-20KB
+  sensor_format: Obfuscated payload
+
+block_page:
+  http_status: [400, 403]
+  characteristics: Minimal body or redirect loop
