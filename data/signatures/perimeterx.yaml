@@ -1,0 +1,57 @@
+name: PerimeterX (HUMAN Security)
+provider: perimeterx
+description: PerimeterX uses behavioral analysis and device fingerprinting
+
+cookies:
+  - name: _px3
+    description: Primary PerimeterX cookie (newer versions)
+    weight: 0.15
+  - name: _pxvid
+    description: Persistent visitor ID cookie
+    weight: 0.15
+  - name: _px2
+    description: Older PerimeterX cookie
+    weight: 0.15
+  - name: _pxde
+    description: Data enrichment cookie
+    weight: 0.15
+  - name: _pxhd
+    description: Header data cookie
+    weight: 0.15
+  - name: _px
+    description: Base cookie
+    weight: 0.1
+  - name: _pxff
+    description: Feature flags cookie
+    weight: 0.1
+
+scripts:
+  patterns:
+    - regex: 'client\.perimeterx\.net/.*main\.min\.js'
+      description: Third-party PX script CDN
+      weight: 0.2
+    - regex: 'px-cdn\.net/.*main\.min\.js'
+      description: PX CDN alternative
+      weight: 0.2
+    - regex: '/px/client/main\.min\.js'
+      description: First-party PX proxy
+      weight: 0.2
+  signatures:
+    - _pxAppId
+    - px-captcha
+    - px-block
+
+headers:
+  - name: x-px-*
+    description: PerimeterX custom headers
+    weight: 0.2
+
+block_page:
+  indicators:
+    - '<div id="px-captcha">'
+    - '<div id="px-block">'
+    - 'window._pxAppId'
+    - "Access to this page has been denied"
+    - captcha.perimeterx.net
+    - captcha.px-cdn.net
+  http_status: 403

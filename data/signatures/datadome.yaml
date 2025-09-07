@@ -1,0 +1,41 @@
+name: DataDome
+provider: datadome
+description: DataDome uses real-time device and behavioral analysis with distinctive response headers
+
+cookies:
+  - name: datadome
+    description: Single primary cookie, refreshed on every request (60-80 chars)
+    weight: 0.4
+
+scripts:
+  patterns:
+    - regex: 'js\.datadome\.co/tags\.js'
+      description: Primary DataDome script
+      weight: 0.2
+  signatures:
+    - ddjskey
+    - ddoptions
+    - DataDome
+
+headers:
+  - name: x-datadome-cid
+    description: Correlation ID header (nearly always present)
+    weight: 0.35
+  - name: x-datadome
+    weight: 0.3
+  - name: x-dd-b
+    description: Bot score header
+    weight: 0.3
+  - name: x-dd-type
+    description: Classification type
+    weight: 0.3
+  - name: server
+    values: [DataDome]
+    weight: 0.3
+
+challenge:
+  urls:
+    - geo.captcha-delivery.com
+    - interstitial.captcha-delivery.com
+    - captcha-delivery.com
+  api_endpoint: https://api-js.datadome.co/js/
