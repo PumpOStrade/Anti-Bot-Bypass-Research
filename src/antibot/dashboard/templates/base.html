@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AntiBotLab{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 800: '#1a1a2e', 900: '#0f0f23', 700: '#16213e' },
+                        neon: { green: '#00ff41', blue: '#00d4ff', red: '#ff0040', yellow: '#ffd700', purple: '#bf00ff' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full bg-dark-900 text-gray-100 font-mono">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-56 bg-dark-800 border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h1 class="text-xl font-bold text-neon-green tracking-wider">
+                    <span class="text-neon-blue">&gt;</span> AntiBotLab
+                </h1>
+                <p class="text-xs text-gray-500 mt-1">v0.1.0 — Research Tool</p>
+            </div>
+            <nav class="flex-1 p-3 space-y-1">
+                <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span class="text-neon-green mr-2">$</span> Dashboard
+                </a>
+                <a href="/scan" class="nav-link {% if active_page == 'scan' %}active{% endif %}">
+                    <span class="text-neon-blue mr-2">$</span> New Scan
+                </a>
+                <a href="/fingerprints" class="nav-link {% if active_page == 'fingerprints' %}active{% endif %}">
+                    <span class="text-neon-purple mr-2">$</span> Fingerprints
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-700 text-xs text-gray-600">
+                <p>Security Research Only</p>
+                <p class="mt-1">Authorized Use Required</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <div class="p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
