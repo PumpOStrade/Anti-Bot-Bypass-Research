@@ -1,0 +1,30 @@
+{
+  "name": "research1",
+  "browser": "chrome",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "screen_width": 2560,
+  "screen_height": 1440,
+  "color_depth": 24,
+  "timezone": "America/Denver",
+  "timezone_offset": -420,
+  "locale": "en-US",
+  "languages": [
+    "en-US",
+    "en"
+  ],
+  "hardware_concurrency": 16,
+  "device_memory": 8,
+  "max_touch_points": 0,
+  "platform": "Win32",
+  "canvas_seed": 122976463,
+  "webgl_vendor": "Google Inc. (NVIDIA)",
+  "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "plugins": [
+    "PDF Viewer",
+    "Chrome PDF Viewer",
+    "Chromium PDF Viewer",
+    "Microsoft Edge PDF Viewer",
+    "WebKit built-in PDF"
+  ],
+  "cookies": {}
+}
