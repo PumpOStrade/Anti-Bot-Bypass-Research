@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% set active_page = "scan" %}
+
+{% block title %}AntiBotLab — New Scan{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <h2 class="text-2xl font-bold text-neon-blue">> New Scan</h2>
+
+    <!-- Scan Form -->
+    <div class="bg-dark-800 border border-gray-700 rounded-lg p-6">
+        <form id="scanForm" class="space-y-4">
+            <!-- URL Input -->
+            <div>
+                <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Target URL</label>
+                <input type="url" name="url" id="scanUrl" required
+                    placeholder="https://example.com"
+                    class="w-full bg-dark-900 border border-gray-600 rounded px-4 py-3 text-neon-green
+                           focus:outline-none focus:border-neon-green placeholder-gray-600 font-mono">
+            </div>
+
+            <!-- Detectors -->
+            <div>
+                <label class="block text-xs text-gray-400 uppercase tracking-wider mb-2">Detectors</label>
+                <div class="flex flex-wrap gap-3">
+                    <label class="detector-checkbox">
+                        <input type="checkbox" name="detectors" value="akamai" checked class="sr-only peer">
+                        <span class="px-3 py-1.5 rounded border border-blue-800 text-blue-400 text-xs
+                                     peer-checked:bg-blue-900/50 peer-checked:border-blue-500 cursor-pointer transition">
+                            Akamai
+                        </span>
+                    </label>
+                    <label class="detector-checkbox">
+                        <input type="checkbox" name="detectors" value="perimeterx" checked class="sr-only peer">
+                        <span class="px-3 py-1.5 rounded border border-purple-800 text-purple-400 text-xs
+                                     peer-checked:bg-purple-900/50 peer-checked:border-purple-500 cursor-pointer transition">
+                            PerimeterX
+                        </span>
+                    </label>
+                    <label class="detector-checkbox">
+                        <input type="checkbox" name="detectors" value="datadome" checked class="sr-only peer">
+                        <span class="px-3 py-1.5 rounded border border-green-800 text-green-400 text-xs
+                                     peer-checked:bg-green-900/50 peer-checked:border-green-500 cursor-pointer transition">
+                            DataDome
+                        </span>
+                    </label>
+                    <label class="detector-checkbox">
+                        <input type="checkbox" name="detectors" value="kasada" checked class="sr-only peer">
+                        <span class="px-3 py-1.5 rounded border border-yellow-800 text-yellow-400 text-xs
+                                     peer-checked:bg-yellow-900/50 peer-checked:border-yellow-500 cursor-pointer transition">
+                            Kasada
+                        </span>
+                    </label>
+                    <label class="detector-checkbox">
+                        <input type="checkbox" name="detectors" value="shape" checked class="sr-only peer">
+                        <span class="px-3 py-1.5 rounded border border-red-800 text-red-400 text-xs
+                                     peer-checked:bg-red-900/50 peer-checked:border-red-500 cursor-pointer transition">
+                            Shape
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bypass Toggle -->
+            <div class="flex items-center gap-3">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="attempt_bypass" id="attemptBypass" class="sr-only peer">
+                    <div class="w-9 h-5 bg-gray-700 peer-checked:bg-neon-green/30 rounded-full
+                                after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                after:bg-gray-400 peer-checked:after:bg-neon-green after:rounded-full
+                                after:h-4 after:w-4 after:transition peer-checked:after:translate-x-4">
+                    </div>
+                </label>
+                <span class="text-sm text-gray-300">Attempt bypass after detection</span>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" id="submitBtn"
+                class="w-full py-3 bg-neon-green/10 border border-neon-green text-neon-green rounded
+                       hover:bg-neon-green/20 transition font-bold tracking-wider">
+                SCAN TARGET
+            </button>
+        </form>
+    </div>
+
+    <!-- Results (shown after scan) -->
+    <div id="scanResults" class="hidden space-y-4">
+        <div class="flex items-center gap-2">
+            <h3 class="text-lg font-bold text-neon-green">Results</h3>
+            <div id="loadingSpinner" class="hidden">
+                <div class="animate-spin w-4 h-4 border-2 border-neon-green border-t-transparent rounded-full"></div>
+            </div>
+        </div>
+        <div id="resultsContent"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('scanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const url = document.getElementById('scanUrl').value;
+    const bypass = document.getElementById('attemptBypass').checked;
+    const detectors = Array.from(document.querySelectorAll('input[name="detectors"]:checked'))
+        .map(cb => cb.value);
+
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const resultsDiv = document.getElementById('scanResults');
+    const resultsContent = document.getElementById('resultsContent');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'SCANNING...';
+    spinner.classList.remove('hidden');
+    resultsDiv.classList.remove('hidden');
+    resultsContent.innerHTML = '<p class="text-gray-500">Scanning target...</p>';
+
+    try {
+        const response = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: url,
+                detectors: detectors.length > 0 ? detectors : null,
+                attempt_bypass: bypass
+            })
+        });
+
+        const data = await response.json();
+
+        let html = '';
+
+        if (data.detections.length === 0) {
+            html = `<div class="bg-dark-800 border border-gray-700 rounded-lg p-4">
+                <p class="text-gray-400">No anti-bot protection detected on this site.</p>
+            </div>`;
+        } else {
+            for (const det of data.detections) {
+                const color = {
+                    akamai: 'blue', perimeterx: 'purple', datadome: 'green',
+                    kasada: 'yellow', shape: 'red'
+                }[det.provider] || 'gray';
+
+                const confPct = Math.round(det.confidence * 100);
+                html += `
+                <div class="bg-dark-800 border border-${color}-800/50 rounded-lg p-4 mb-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-${color}-400 font-bold uppercase">${det.provider}</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 bg-gray-700 rounded-full h-2">
+                                <div class="h-2 rounded-full bg-${color}-500" style="width: ${confPct}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400">${confPct}%</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        ${det.evidence.map(ev => `
+                            <div class="text-xs text-gray-400">
+                                <span class="text-${color}-500 mr-1">+</span> ${ev.description}
+                                ${ev.value ? `<span class="text-gray-600 ml-1">(${ev.value.substring(0, 60)}${ev.value.length > 60 ? '...' : ''})</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${det.cookies_found.length > 0 ? `
+                        <div class="mt-2 text-xs text-gray-500">
+                            Cookies: ${det.cookies_found.join(', ')}
+                        </div>
+                    ` : ''}
+                </div>`;
+            }
+        }
+
+        // Solve results
+        if (data.solve_results && data.solve_results.length > 0) {
+            html += '<h4 class="text-sm text-gray-400 uppercase tracking-wider mt-4 mb-2">Bypass Results</h4>';
+            for (const solve of data.solve_results) {
+                html += `
+                <div class="bg-dark-800 border border-gray-700 rounded-lg p-4 mb-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="uppercase font-bold text-sm ${solve.success ? 'text-neon-green' : 'text-neon-red'}">
+                            ${solve.provider}
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded ${solve.success ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}">
+                            ${solve.success ? 'SUCCESS' : 'FAILED'}
+                        </span>
+                        <span class="text-xs text-gray-600">${solve.duration_ms}ms</span>
+                    </div>
+                    ${solve.error ? `<p class="text-xs text-red-400">${solve.error}</p>` : ''}
+                    ${solve.success && solve.cookies ? `
+                        <details class="mt-2">
+                            <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-400">View cookies</summary>
+                            <pre class="mt-1 text-xs text-gray-600 bg-dark-900 p-2 rounded overflow-x-auto">${JSON.stringify(solve.cookies, null, 2)}</pre>
+                        </details>
+                    ` : ''}
+                </div>`;
+            }
+        }
+
+        if (data.scan_id) {
+            html += `<a href="/results/${data.scan_id}" class="inline-block mt-2 text-neon-blue hover:text-neon-green text-sm transition">
+                View full results →
+            </a>`;
+        }
+
+        resultsContent.innerHTML = html;
+
+    } catch (err) {
+        resultsContent.innerHTML = `<div class="bg-red-900/20 border border-red-800 rounded-lg p-4">
+            <p class="text-red-400 text-sm">Error: ${err.message}</p>
+        </div>`;
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SCAN TARGET';
+        spinner.classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

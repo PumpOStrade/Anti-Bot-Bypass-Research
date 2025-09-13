@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% set active_page = "results" %}
+
+{% block title %}AntiBotLab — Scan Results{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-4">
+        <a href="/" class="text-gray-500 hover:text-neon-green transition">&lt; Back</a>
+        <h2 class="text-2xl font-bold text-neon-blue">> Scan Results</h2>
+    </div>
+
+    <!-- Scan Info -->
+    <div class="bg-dark-800 border border-gray-700 rounded-lg p-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <div class="text-xs text-gray-500 uppercase">URL</div>
+                <div class="text-neon-blue truncate mt-1">{{ scan.url }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 uppercase">Domain</div>
+                <div class="text-gray-300 mt-1">{{ scan.domain }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 uppercase">Status</div>
+                <div class="mt-1">
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if scan.status == 'completed' %}bg-green-900/30 text-green-400
+                        {% elif scan.status == 'error' %}bg-red-900/30 text-red-400
+                        {% else %}bg-yellow-900/30 text-yellow-400{% endif %}">
+                        {{ scan.status }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 uppercase">Time</div>
+                <div class="text-gray-400 text-xs mt-1">{{ scan.started_at.strftime('%Y-%m-%d %H:%M:%S') if scan.started_at else '-' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detections -->
+    {% for detection in scan.detections %}
+    {% set colors = {'akamai': 'blue', 'perimeterx': 'purple', 'datadome': 'green', 'kasada': 'yellow', 'shape': 'red'} %}
+    {% set color = colors.get(detection.provider, 'gray') %}
+    <div class="bg-dark-800 border border-{{ color }}-800/50 rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-gray-700">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-{{ color }}-400 font-bold uppercase text-lg">{{ detection.provider }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded bg-{{ color }}-900/30 text-{{ color }}-400 border border-{{ color }}-800">
+                        Detected
+                    </span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-32 bg-gray-700 rounded-full h-2">
+                        <div class="h-2 rounded-full bg-{{ color }}-500"
+                             style="width: {{ (detection.confidence * 100)|int }}%"></div>
+                    </div>
+                    <span class="text-sm text-gray-400">{{ "%.0f"|format(detection.confidence * 100) }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <!-- Evidence -->
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Evidence</h4>
+            <div class="space-y-1 mb-4">
+                {% set evidence_list = detection.evidence | default('[]') %}
+                {% if evidence_list is string %}
+                    {% for ev in evidence_list | tojson | default([], true) %}
+                    <div class="text-sm text-gray-300">
+                        <span class="text-{{ color }}-500 mr-1">+</span>
+                        {{ ev.get('description', ev) if ev is mapping else ev }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Cookies -->
+            {% if detection.cookies_found %}
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Cookies Found</h4>
+            <div class="text-sm text-gray-400 mb-4">{{ detection.cookies_found }}</div>
+            {% endif %}
+
+            <!-- Solve Attempts -->
+            {% if detection.solve_attempts %}
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-2">Bypass Attempts</h4>
+            {% for attempt in detection.solve_attempts %}
+            <div class="bg-dark-900 rounded p-3 mb-2">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if attempt.success %}bg-green-900/30 text-green-400
+                        {% else %}bg-red-900/30 text-red-400{% endif %}">
+                        {{ 'SUCCESS' if attempt.success else 'FAILED' }}
+                    </span>
+                    <span class="text-xs text-gray-600">{{ attempt.duration_ms }}ms</span>
+                    <span class="text-xs text-gray-600">{{ attempt.attempted_at.strftime('%H:%M:%S') if attempt.attempted_at else '' }}</span>
+                </div>
+                {% if attempt.cookie_name %}
+                <div class="text-xs text-gray-500 mt-1">
+                    Cookie: <span class="text-neon-green">{{ attempt.cookie_name }}</span>
+                    = <span class="text-gray-600">{{ attempt.cookie_value[:100] if attempt.cookie_value else '' }}...</span>
+                </div>
+                {% endif %}
+                {% if attempt.error_message %}
+                <div class="text-xs text-red-400 mt-1">{{ attempt.error_message }}</div>
+                {% endif %}
+                {% if attempt.sensor_data %}
+                <details class="mt-2">
+                    <summary class="text-xs text-gray-600 cursor-pointer hover:text-gray-400">View sensor data</summary>
+                    <pre class="mt-1 text-xs text-gray-600 bg-dark-800 p-2 rounded overflow-x-auto max-h-40">{{ attempt.sensor_data[:2000] }}</pre>
+                </details>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-dark-800 border border-gray-700 rounded-lg p-8 text-center">
+        <p class="text-gray-500">No anti-bot protections detected on this site.</p>
+    </div>
+    {% endfor %}
+
+    <!-- Raw Response Data -->
+    {% if scan.raw_headers %}
+    <details class="bg-dark-800 border border-gray-700 rounded-lg">
+        <summary class="p-4 text-xs text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-400">
+            Raw Response Headers
+        </summary>
+        <pre class="p-4 text-xs text-gray-600 overflow-x-auto border-t border-gray-700">{{ scan.raw_headers }}</pre>
+    </details>
+    {% endif %}
+</div>
+{% endblock %}

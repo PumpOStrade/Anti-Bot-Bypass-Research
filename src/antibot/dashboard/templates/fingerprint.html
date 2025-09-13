@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% set active_page = "fingerprints" %}
+
+{% block title %}AntiBotLab — Fingerprints{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-neon-purple">> Fingerprints</h2>
+        <div class="flex gap-2">
+            <button onclick="collectFingerprint('chromium')" id="collectBtn"
+                class="px-4 py-2 bg-neon-purple/10 border border-neon-purple text-neon-purple rounded
+                       hover:bg-neon-purple/20 transition text-sm">
+                Collect Real FP
+            </button>
+            <button onclick="collectBotFingerprint()" id="collectBotBtn"
+                class="px-4 py-2 bg-neon-red/10 border border-neon-red text-neon-red rounded
+                       hover:bg-neon-red/20 transition text-sm">
+                Collect Bot FP
+            </button>
+        </div>
+    </div>
+
+    <!-- Fingerprint Table -->
+    <div class="bg-dark-800 border border-gray-700 rounded-lg">
+        <div class="p-4 border-b border-gray-700">
+            <h3 class="text-sm text-gray-400 uppercase tracking-wider">Collected Fingerprints</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="fpTable">
+                <thead>
+                    <tr class="text-gray-500 text-xs uppercase border-b border-gray-700">
+                        <th class="text-left p-3">ID</th>
+                        <th class="text-left p-3">Source</th>
+                        <th class="text-left p-3">Platform</th>
+                        <th class="text-left p-3">Screen</th>
+                        <th class="text-left p-3">WebGL</th>
+                        <th class="text-left p-3">Canvas</th>
+                        <th class="text-left p-3">Collected</th>
+                        <th class="text-left p-3">Compare</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fp in fingerprints %}
+                    <tr class="border-b border-gray-800 hover:bg-dark-700/50 transition">
+                        <td class="p-3 text-gray-400">{{ fp.id }}</td>
+                        <td class="p-3">
+                            <span class="text-xs px-2 py-0.5 rounded
+                                {% if 'bot' in fp.source %}bg-red-900/30 text-red-400 border border-red-800
+                                {% else %}bg-green-900/30 text-green-400 border border-green-800{% endif %}">
+                                {{ fp.source }}
+                            </span>
+                        </td>
+                        <td class="p-3 text-gray-300">{{ fp.platform or '-' }}</td>
+                        <td class="p-3 text-gray-400">{{ fp.screen_width or '?' }}x{{ fp.screen_height or '?' }}</td>
+                        <td class="p-3 text-gray-400 text-xs truncate max-w-32">{{ fp.webgl_renderer or '-' }}</td>
+                        <td class="p-3 text-gray-400 text-xs">{{ fp.canvas_hash or '-' }}</td>
+                        <td class="p-3 text-gray-500 text-xs">{{ fp.collected_at.strftime('%Y-%m-%d %H:%M') if fp.collected_at else '-' }}</td>
+                        <td class="p-3">
+                            <input type="checkbox" name="compare_fp" value="{{ fp.id }}"
+                                class="w-4 h-4 accent-neon-purple bg-dark-900 border-gray-600 rounded">
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="p-8 text-center text-gray-600">
+                            No fingerprints collected yet. Click "Collect Real FP" to start.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if fingerprints | length >= 2 %}
+        <div class="p-4 border-t border-gray-700">
+            <button onclick="compareSelected()" id="compareBtn"
+                class="px-4 py-2 bg-neon-yellow/10 border border-neon-yellow text-neon-yellow rounded
+                       hover:bg-neon-yellow/20 transition text-sm">
+                Compare Selected
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Comparison Results -->
+    <div id="comparisonResults" class="hidden space-y-4">
+        <h3 class="text-lg font-bold text-neon-yellow">> Comparison Results</h3>
+        <div id="comparisonContent"></div>
+    </div>
+
+    <!-- Previous Comparisons -->
+    {% if comparisons %}
+    <div class="bg-dark-800 border border-gray-700 rounded-lg">
+        <div class="p-4 border-b border-gray-700">
+            <h3 class="text-sm text-gray-400 uppercase tracking-wider">Previous Comparisons</h3>
+        </div>
+        <div class="space-y-3 p-4">
+            {% for comp in comparisons %}
+            <div class="bg-dark-900 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500">Bot: #{{ comp.bot_fp_id }}</span>
+                        <span class="text-gray-600">vs</span>
+                        <span class="text-xs text-gray-500">Real: #{{ comp.real_fp_id }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">Risk:</span>
+                        <div class="w-24 bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full
+                                {% if comp.risk_score >= 0.7 %}bg-neon-red
+                                {% elif comp.risk_score >= 0.4 %}bg-neon-yellow
+                                {% else %}bg-neon-green{% endif %}"
+                                style="width: {{ (comp.risk_score * 100)|int }}%"></div>
+                        </div>
+                        <span class="text-sm font-bold
+                            {% if comp.risk_score >= 0.7 %}text-neon-red
+                            {% elif comp.risk_score >= 0.4 %}text-neon-yellow
+                            {% else %}text-neon-green{% endif %}">
+                            {{ "%.0f"|format(comp.risk_score * 100) }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-600">
+                    {{ comp.compared_at.strftime('%Y-%m-%d %H:%M') if comp.compared_at else '' }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function collectFingerprint(browser) {
+    const btn = document.getElementById('collectBtn');
+    btn.disabled = true;
+    btn.textContent = 'Collecting...';
+
+    try {
+        const response = await fetch(`/api/fingerprint/collect?browser=${browser}`, { method: 'POST' });
+        const data = await response.json();
+        alert(`Fingerprint collected! ID: ${data.id}, Source: ${data.source}`);
+        location.reload();
+    } catch (err) {
+        alert('Error collecting fingerprint: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Collect Real FP';
+    }
+}
+
+async function collectBotFingerprint() {
+    const btn = document.getElementById('collectBotBtn');
+    btn.disabled = true;
+    btn.textContent = 'Collecting...';
+
+    try {
+        const response = await fetch('/api/fingerprint/collect-bot', { method: 'POST' });
+        const data = await response.json();
+        alert(`Bot fingerprint collected! ID: ${data.id}`);
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Collect Bot FP';
+    }
+}
+
+async function compareSelected() {
+    const checkboxes = document.querySelectorAll('input[name="compare_fp"]:checked');
+    if (checkboxes.length !== 2) {
+        alert('Please select exactly 2 fingerprints to compare.');
+        return;
+    }
+
+    const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    const btn = document.getElementById('compareBtn');
+    btn.disabled = true;
+    btn.textContent = 'Comparing...';
+
+    try {
+        const response = await fetch(`/api/fingerprint/compare?bot_id=${ids[0]}&real_id=${ids[1]}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        const resultsDiv = document.getElementById('comparisonResults');
+        const content = document.getElementById('comparisonContent');
+        resultsDiv.classList.remove('hidden');
+
+        const riskColor = data.risk_score >= 0.7 ? 'red' : data.risk_score >= 0.4 ? 'yellow' : 'green';
+        const severityColors = { critical: 'red', high: 'red', medium: 'yellow', low: 'gray' };
+
+        let html = `
+        <div class="bg-dark-800 border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <span class="text-4xl font-bold text-neon-${riskColor}">${Math.round(data.risk_score * 100)}%</span>
+                    <span class="text-sm text-gray-500 ml-2">Detection Risk</span>
+                </div>
+                <div class="text-sm text-gray-400">
+                    ${data.matching_fields}/${data.total_fields} fields match
+                </div>
+            </div>
+
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 text-xs uppercase border-b border-gray-700">
+                        <th class="text-left p-2">Severity</th>
+                        <th class="text-left p-2">Field</th>
+                        <th class="text-left p-2">Bot Value</th>
+                        <th class="text-left p-2">Real Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.mismatches.map(m => `
+                        <tr class="border-b border-gray-800">
+                            <td class="p-2">
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-${severityColors[m.severity] || 'gray'}-900/30 text-${severityColors[m.severity] || 'gray'}-400">
+                                    ${m.severity}
+                                </span>
+                            </td>
+                            <td class="p-2 text-gray-300">${m.field}</td>
+                            <td class="p-2 text-neon-red text-xs">${(m.bot_value || 'null').substring(0, 50)}</td>
+                            <td class="p-2 text-neon-green text-xs">${(m.real_value || 'null').substring(0, 50)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
+        content.innerHTML = html;
+
+    } catch (err) {
+        alert('Error comparing: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Compare Selected';
+    }
+}
+</script>
+{% endblock %}
